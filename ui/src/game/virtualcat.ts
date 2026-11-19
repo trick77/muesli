@@ -32,7 +32,8 @@ export class VirtualCat {
     this.wait -= dt;
     if (this.wait > 0) return;
     this.wait = this.rng.range(...this.every);
-    const p = s.all.find((q) => q.catchable);
+    // Pounces on prey out on the screen, not on a head peeking in at the edge.
+    const p = s.all.find((q) => q.catchable && ['creep', 'freeze', 'bolt', 'edge', 'lure'].includes(q.state));
     if (!p) return;
     const rng = this.rng;
     const off = rng.chance(this.aim) ? rng.range(0, p.r) : rng.range(2, 7) * p.r;
