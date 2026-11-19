@@ -116,6 +116,9 @@ const R_MAX = 28;
 const BAND = 0.2;
 /** Seconds a scare blocks the next one: a swiping paw is one scare, not twenty. */
 const SCARE_COOLDOWN = 0.35;
+/** The escape's zigzag: a swerve every 0.12 to 0.3 s, 0.5 to 0.9 rad off the line out. */
+const ZIGZAG_EVERY: [number, number] = [0.12, 0.3];
+const ZIGZAG: [number, number] = [0.5, 0.9];
 
 /** What the session tells the prey each step. */
 export interface Drive {
@@ -190,6 +193,10 @@ export class Prey {
   private peekAgain = false;
   private sound = 0;
   private lastPaw: Vec = { x: 0, y: 0 };
+  /** Run off the screen once free (see hit()). */
+  private escapeNext = false;
+  /** This exit swerves (an escape after a hit). */
+  zigzag = false;
   private drive: Drive = NEUTRAL;
 
   constructor(
@@ -336,10 +343,15 @@ export class Prey {
     this.flee(paw, 'sprint');
   }
 
-  /** The paw hit at `paw`. Returns true if this hit killed it. */
-  hit(paw: Vec): boolean {
+  /**
+   * The paw hit at `paw`. Returns true if this hit killed it. `escape`: once it wriggles free it runs off the
+   * screen in a zigzag instead of to the nearest cover (the session asks for it after hits in a row, and now and
+   * then after a first one).
+   */
+  hit(paw: Vec, escape = false): boolean {
     if (!this.catchable) return false;
     this.lastPaw = { ...paw };
+    this.escapeNext = escape;
     this.wounds++;
     this.emit('hit');
     this.emit('squeak');
@@ -366,6 +378,7 @@ export class Prey {
     this.state = s;
     this.stateT = 0;
     this.fleeing = false;
+    this.zigzag = false;
     this.target = null;
     this.sub = 'go';
     this.subT = 0;
@@ -463,11 +476,13 @@ export class Prey {
         if (this.stateT >= this.stateDur) this.go('enter');
         return;
       case 'exit':
-        if (!onScreen(this.field, this.pos, this.r * 1.6) || this.stateT > this.stateDur) this.leave();
+        if (!onScreen(this.field, this.pos, this.r * 1.6) || this.stateT > this.stateDur) return this.leave();
+        if (this.zigzag) this.jinks(dt, ZIGZAG_EVERY, ZIGZAG);
         return;
       case 'caught':
         if (this.stateT >= this.stateDur) {
           if (this.wounds >= this.lives) this.go('dead');
+          else if (this.escapeNext && !this.drive.easy) this.escape(this.lastPaw);
           else this.flee(this.lastPaw, 'blitz', true);
         }
         return;
@@ -502,14 +517,55 @@ export class Prey {
         break;
       case 'bolt':
         if (this.arrived()) return this.fleeing ? this.go('freeze') : this.next();
-        this.jinkT -= dt;
-        if (this.jinkT <= 0) {
-          this.jinkT = rng.range(...this.motion.jinkEvery);
-          this.jinkOff = rng.sign() * rng.range(...this.motion.jink);
-        }
+        this.jinks(dt, this.motion.jinkEvery, this.motion.jink);
         break;
     }
     if (this.stateT >= this.stateDur) this.next();
+  }
+
+  /** Sudden swerves off the line to the target, alternating sides more often than not. */
+  private jinks(dt: number, every: readonly [number, number], size: readonly [number, number]) {
+    this.jinkT -= dt;
+    if (this.jinkT > 0) return;
+    this.jinkT = this.rng.range(...every);
+    const side = this.jinkOff === 0 || this.rng.chance(0.25) ? this.rng.sign() : -Math.sign(this.jinkOff);
+    this.jinkOff = side * this.rng.range(...size);
+  }
+
+  /**
+   * Wriggled free and away: off the screen through an edge away from the paw, at full speed and in a zigzag, never
+   * in a straight line. Not the nearest edge: pressed to a wall, that run would be over before a swerve shows.
+   */
+  private escape(paw: Vec) {
+    const S = this.S;
+    const f = this.field;
+    const away = dist(paw, this.pos) < 1 ? this.heading + Math.PI : angleTo(paw, this.pos);
+    const ax = Math.cos(away);
+    const ay = Math.sin(away);
+    let best: Side = 'left';
+    let bestScore = -Infinity;
+    for (const s of SIDES) {
+      const n = outward(s);
+      const toward = n.x * ax + n.y * ay;
+      if (toward < -0.2) continue; // never back past the paw
+      const d =
+        s === 'left' ? this.pos.x : s === 'right' ? f.w - this.pos.x : s === 'top' ? this.pos.y : f.h - this.pos.y;
+      // a run of about 0.6 short edges: long enough for several swerves, short enough to be gone in a second
+      const score = (toward + 0.8) / (Math.abs(d - 0.6 * S) + 0.15 * S);
+      if (score > bestScore) {
+        bestScore = score;
+        best = s;
+      }
+    }
+    this.emit('scare');
+    this.go('exit');
+    this.setTier('blitz');
+    this.fleeing = true;
+    this.zigzag = true;
+    this.exitSide = best;
+    this.target = this.offScreen(best, this.pos, 3);
+    this.jinkT = 0;
+    this.jinkOff = 0;
   }
 
   /** Anything but a struggle, death or a running exit can be cut short by the director's exit. */
@@ -898,7 +954,8 @@ export class Prey {
     if (this.target) {
       const left = dist(this.pos, this.target);
       want = Math.min(want, Math.sqrt(2 * BRAKE * S * 0.9 * left));
-      let desired = angleTo(this.pos, this.target) + (this.state === 'bolt' ? this.jinkOff : 0);
+      const swerving = this.state === 'bolt' || (this.state === 'exit' && this.zigzag);
+      let desired = angleTo(this.pos, this.target) + (swerving ? this.jinkOff : 0);
       if (left < this.r) desired = angleTo(this.pos, this.target);
       const diff = wrap(desired - this.heading);
       const still = this.speed < 0.03 * S;

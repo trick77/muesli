@@ -258,6 +258,84 @@ describe('session', () => {
   });
 });
 
+describe('escape after hits', () => {
+  /** Hits the prey and steps until it is free again; returns the state it got free into. */
+  function hitAndRelease(s: Session, id: number) {
+    const p = s.prey;
+    // a paw lands a little off the centre
+    const paw = { x: p.pos.x + 0.5 * p.r, y: p.pos.y - 0.3 * p.r };
+    s.pointer('down', id, paw, 'touch');
+    s.pointer('up', id, paw, 'touch');
+    expect(p.state).toBe('caught');
+    while (p.state === 'caught') s.step(DT);
+    return p.state;
+  }
+
+  it('runs off the screen in a zigzag after hits in a row', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 30 && checked < 5; seed++) {
+      const s = session(seed);
+      const p = untilOnScreen(s);
+      p.lives = 99;
+      if (hitAndRelease(s, 1) === 'exit') continue; // escaped on the first hit already
+      // the second hit in a row, while it runs
+      for (let i = 0; i < 20 && !p.catchable; i++) s.step(DT);
+      expect(hitAndRelease(s, 2)).toBe('exit');
+      expect(p.zigzag).toBe(true);
+      expect(s.streak).toBe(0);
+      // it swerves: the heading turns one way and the other, and the path strays off the straight line out
+      let turns = 0;
+      let last = 0;
+      const path = [{ ...p.pos }];
+      for (let i = 0; i < 60 * 4 && p.state === 'exit'; i++) {
+        s.step(DT);
+        path.push({ ...p.pos });
+        const d = Math.atan2(Math.sin(p.heading - p.prevHeading), Math.cos(p.heading - p.prevHeading));
+        if (Math.abs(d) > 0.01) {
+          if (last && Math.sign(d) !== Math.sign(last)) turns++;
+          last = d;
+        }
+      }
+      const a = path[0];
+      const b = path[path.length - 1];
+      const len = Math.hypot(b.x - a.x, b.y - a.y);
+      const off = Math.max(...path.map((q) => Math.abs((b.x - a.x) * (a.y - q.y) - (a.x - q.x) * (b.y - a.y)) / len));
+      expect(turns, `seed ${seed}`).toBeGreaterThanOrEqual(1);
+      expect(off, `seed ${seed}`).toBeGreaterThan(0.5 * p.r);
+      expect(p.state).toBe('away');
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
+  });
+
+  it('sometimes escapes after a single hit, a missed pounce breaks the streak', () => {
+    let escaped = 0;
+    let n = 0;
+    for (let seed = 1; seed <= 80; seed++) {
+      const s = session(seed);
+      const p = untilOnScreen(s);
+      p.lives = 99;
+      const state = hitAndRelease(s, 1);
+      n++;
+      if (state === 'exit' && p.zigzag) escaped++;
+      if (seed === 1) {
+        s.pointer('down', 50, { x: 1, y: 1 }, 'touch');
+        expect(s.streak).toBe(0);
+      }
+    }
+    expect(escaped / n).toBeGreaterThan(0.1);
+    expect(escaped / n).toBeLessThan(0.45);
+  });
+
+  it('does not escape when the hit kills, nor in the finale', () => {
+    const s = session(4);
+    const p = untilOnScreen(s);
+    p.lives = 1;
+    s.streak = 5;
+    expect(hitAndRelease(s, 1)).toBe('dead');
+  });
+});
+
 describe('prey', () => {
   it('starts away and comes in from an edge', () => {
     const f = ipad();
