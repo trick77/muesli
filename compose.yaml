@@ -1,0 +1,58 @@
+# Production: the released image behind an existing Traefik (entrypoints web/websecure, certresolver letsencrypt,
+# external network `traefik`). Dev runs with `go run` + `npm run dev` instead (README).
+#
+#   docker compose pull && docker compose up -d
+#
+# No port is published: Traefik reaches the container on the shared `traefik` network. Host and sub-path come from
+# .env only (cp .env.example .env): without PUBLIC_FQDN and PUBLIC_PATH every compose command refuses to run.
+services:
+  muesli:
+    image: ghcr.io/trick77/muesli:latest
+    restart: unless-stopped
+    user: "65532:65532"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    # BACKEND_* from .env reach the container. Optional so the file still parses without one; the router's
+    # PUBLIC_FQDN/PUBLIC_PATH checks stop compose anyway. path/required needs Docker Compose 2.24+.
+    env_file:
+      - path: .env
+        required: false
+    healthcheck:
+      # Exec form: distroless has no shell.
+      test: ["CMD", "/app/server", "-healthcheck"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    expose:
+      - "8080"
+    networks:
+      - traefik
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: traefik
+      traefik.http.services.muesli.loadbalancer.server.port: "8080"
+      traefik.http.routers.muesli.entrypoints: websecure
+      # The path itself or anything below it, never a sibling that only starts the same (/gamex).
+      traefik.http.routers.muesli.rule: >-
+        Host(`${PUBLIC_FQDN:?set PUBLIC_FQDN in .env, the hostname Traefik routes the game on}`) &&
+        (Path(`${PUBLIC_PATH:?set PUBLIC_PATH in .env, the sub-path the game lives under}`) ||
+        PathPrefix(`${PUBLIC_PATH}/`))
+      traefik.http.routers.muesli.tls: "true"
+      traefik.http.routers.muesli.tls.certresolver: letsencrypt
+      traefik.http.routers.muesli.middlewares: muesli-slash,muesli-strip,muesli-compress
+      # The page's URLs are relative: without the trailing slash ./assets/ would resolve beside the path, not in it.
+      traefik.http.middlewares.muesli-slash.redirectregex.regex: ^(https?://[^/]+${PUBLIC_PATH})(\?.*)?$$
+      traefik.http.middlewares.muesli-slash.redirectregex.replacement: $${1}/$${2}
+      traefik.http.middlewares.muesli-slash.redirectregex.permanent: "true"
+      traefik.http.middlewares.muesli-strip.stripprefix.prefixes: ${PUBLIC_PATH}
+      traefik.http.middlewares.muesli-compress.compress: "true"
+      # No http router: the `web` entrypoint redirects to `websecure` for every host.
+      com.centurylinklabs.watchtower.enable: "false"
+      diun.enable: "false"
+
+networks:
+  traefik:
+    external: true

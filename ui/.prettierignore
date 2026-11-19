@@ -1,0 +1,7 @@
+dist
+node_modules
+public
+package-lock.json
+# ship conform matches these by literal double-quoted strings; singleQuote would rewrite them.
+vite.config.ts
+src/test/setup.ts
