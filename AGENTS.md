@@ -29,7 +29,8 @@ Canvas 2D. `backend/`: Go (ship kit), serves the embedded UI only (no database).
 - `game/` is pure and seeded (`Rng`): no DOM, audio, `Math.random` or clock. `tests/game/behaviour.test.ts` checks
   the plan's guarantees over many seeds; a change to movement must keep it green, not loosen it.
 - `?trace[=seconds]&seed=N`: a whole session's path coloured by speed band. `?demo`: a pretend cat plays.
-  `e2e/shots.ts`: screenshots (README uses `docs/hunt.png`, `docs/trace.png`).
+  `e2e/shots.ts` (preview running, ffmpeg, unsandboxed) remakes `docs/hunt.gif` and `docs/trace.png`. The GIF is
+  recorded at 560x392: the prey keeps its 12 px minimum radius, so a small screen shows it big enough to see.
 - Learning (`game/learn.ts`) stays per device in localStorage; weights only after 3 sessions with touches, within 2x.
 
 ## Dev / prod
