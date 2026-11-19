@@ -93,6 +93,16 @@ describe('start screen', () => {
     expect(stack.at(-1)!.name).toBe('stats');
     app.pop();
     s.pointer(ptr('down', W / 2, H / 2 - 50));
+    // not on touching down: fullscreen needs the release
+    expect(stack.at(-1)!.name).toBe('start');
+    // a release elsewhere, or of a tap that began elsewhere, starts nothing
+    s.pointer(ptr('up', 5, 5));
+    expect(stack.at(-1)!.name).toBe('start');
+    s.pointer(ptr('down', 5, 5, 2));
+    s.pointer(ptr('up', W / 2, H / 2 - 50, 2));
+    expect(stack.at(-1)!.name).toBe('start');
+    s.pointer(ptr('down', W / 2, H / 2 - 50, 3));
+    s.pointer(ptr('up', W / 2, H / 2 - 40, 3));
     expect(stack.at(-1)!.name).toBe('hunt');
     const s2 = new StartScreen(app);
     app.replace(s2);

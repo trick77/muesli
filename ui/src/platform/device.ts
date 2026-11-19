@@ -72,7 +72,14 @@ export function standalone(): boolean {
 }
 
 /** Fullscreen where the browser has it for any element (desktop, Android, iPad); never on iPhone Safari. */
+let fullscreenWanted = false;
+
+/**
+ * Must run inside a pointerup/touchend (or a mouse's pointerdown): a touch's pointerdown carries no user activation,
+ * and Safari refuses fullscreen without one (HTML spec, activation-triggering events).
+ */
 export function enterFullscreen() {
+  fullscreenWanted = true;
   const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: () => void };
   if (standalone() || document.fullscreenElement) return;
   try {
@@ -81,6 +88,14 @@ export function enterFullscreen() {
   } catch {
     // refused: the page stays as it is
   }
+}
+
+/**
+ * A finger let go: back to fullscreen if it was asked for and got lost (a swipe down on an iPad leaves it, so may a
+ * paw). Touch only: on a desktop, leaving fullscreen with Escape is the human's choice.
+ */
+export function keepFullscreen(kind: string) {
+  if (fullscreenWanted && kind === 'touch') enterFullscreen();
 }
 
 export const canFullscreen = () =>

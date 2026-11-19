@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { empty, merge } from '../../src/game/learn';
-import { canFullscreen, enterFullscreen, safeArea, standalone, touchScreen, wakeLock } from '../../src/platform/device';
+import {
+  canFullscreen,
+  enterFullscreen,
+  keepFullscreen,
+  safeArea,
+  standalone,
+  touchScreen,
+  wakeLock,
+} from '../../src/platform/device';
 import { settings } from '../../src/platform/settings';
 import { stubWindow } from '../stubs';
 
@@ -103,6 +111,21 @@ describe('device', () => {
     await wakeLock.on();
     expect(wakeLock.held).toBe(false);
     await wakeLock.off();
+  });
+
+  it('takes fullscreen back on a touch release once it was asked for, never on a mouse', () => {
+    stubWindow();
+    const req = vi.fn(async () => {});
+    (document as unknown as { documentElement: unknown }).documentElement = { requestFullscreen: req };
+    enterFullscreen();
+    expect(req).toHaveBeenCalledTimes(1);
+    keepFullscreen('mouse');
+    expect(req).toHaveBeenCalledTimes(1);
+    keepFullscreen('touch');
+    expect(req).toHaveBeenCalledTimes(2);
+    (document as unknown as { fullscreenElement: unknown }).fullscreenElement = {};
+    keepFullscreen('touch');
+    expect(req).toHaveBeenCalledTimes(2);
   });
 
   it('asks for fullscreen only where the browser has it and the page is not installed', () => {

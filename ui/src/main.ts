@@ -1,5 +1,6 @@
 import './style.css';
 import { App } from './app';
+import { keepFullscreen } from './platform/device';
 import { HuntScreen } from './screens/hunt';
 import { StartScreen } from './screens/start';
 import { TraceScreen } from './screens/trace';
@@ -11,6 +12,8 @@ const app = new App(document.getElementById('screen') as HTMLCanvasElement);
 if (q.has('trace')) app.replace(new TraceScreen(app, seed ?? 1, Number(q.get('trace')) || 120));
 else if (q.has('demo')) app.replace(new HuntScreen(app, { seed, demo: true }));
 else app.replace(new StartScreen(app, { seed }));
+// Fullscreen lost on an iPad (a swipe down, a paw): the next touch's release brings it back.
+addEventListener('pointerup', (e) => keepFullscreen(e.pointerType), { passive: true });
 // Hook for the end-to-end tests.
 (window as unknown as { __app: App }).__app = app;
 if ('serviceWorker' in navigator && import.meta.env.PROD)
