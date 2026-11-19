@@ -1,14 +1,15 @@
-// The README's images: not a test. Needs a running preview and ffmpeg on the PATH:
-//   node e2e/shots.ts <baseURL> <outDir> [seed]
-// Writes <outDir>/hunt.gif (the liveliest seconds of ?demo, a pretend cat playing) and <outDir>/trace.png (?trace).
+// The README's images: not a test. Needs `npm run preview` running and ffmpeg on the PATH; from ui/:
+//   node e2e/shots.ts [baseURL] [outDir] [seed]      (defaults: the preview, ../docs, 7)
+// Writes <outDir>/hunt.gif (the liveliest seconds of ?demo, a pretend cat playing) and <outDir>/trace.png (?trace),
+// both from the same seed.
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium, devices, webkit } from '@playwright/test';
 
 const base = process.argv[2] ?? 'http://127.0.0.1:4173';
-const out = process.argv[3] ?? 'test-results/shots';
+const out = process.argv[3] ?? '../docs';
 const seed = Number(process.argv[4] ?? 7);
 
 /** Recorded small on purpose: the prey keeps its minimum size, so it fills more of a small screen. */
@@ -24,6 +25,7 @@ interface Hook {
 }
 
 const run = async () => {
+  mkdirSync(out, { recursive: true });
   const dir = mkdtempSync(join(tmpdir(), 'muesli-shots-'));
   try {
     const browser = await chromium.launch();
@@ -31,8 +33,9 @@ const run = async () => {
       viewport: { width: W, height: H },
       recordVideo: { dir, size: { width: W, height: H } },
     });
-    const page = await ctx.newPage();
+    // The video starts with the page: the samples' clock too.
     const t0 = Date.now();
+    const page = await ctx.newPage();
     await page.goto(`${base}/?demo&seed=${seed}`);
     // Sample the prey ten times a second: where it is, whether it is out in the open.
     const samples: { t: number; x: number; y: number; open: boolean; hits: number }[] = [];
@@ -75,6 +78,8 @@ const run = async () => {
         best = from.t;
       }
     }
+    // Nothing to show (a broken build, no session): fail, never a black GIF.
+    if (!samples.length || bestScore <= 0) throw new Error(`no lively stretch in the recording (${samples.length} samples)`);
     // A palette of the few colours on screen keeps the GIF small and the edges hard.
     execFileSync('ffmpeg', [
       '-y',
@@ -98,7 +103,7 @@ const run = async () => {
 
   const wk = await webkit.launch();
   const page = await (await wk.newContext({ ...devices['iPad Pro 11 landscape'] })).newPage();
-  await page.goto(`${base}/?trace&seed=7`);
+  await page.goto(`${base}/?trace&seed=${seed}`);
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${out}/trace.png` });
   await wk.close();

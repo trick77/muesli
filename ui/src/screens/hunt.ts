@@ -55,7 +55,7 @@ export class HuntScreen implements Screen {
       learned: weights(learn),
       lastLook: settings.lastLook,
     });
-    this.cat = opts.demo ? new VirtualCat(seed, [1, 3], 0.5) : null;
+    this.cat = opts.demo ? new VirtualCat(seed, [1, 3], 0.5, true) : null;
     this.pause = new Hold(this.spots(), PAUSE_HOLD);
   }
 

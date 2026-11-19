@@ -154,10 +154,10 @@ describe('leaving the screen', () => {
       for (let i = 1; i < frames.length; i++) {
         const f = frames[i];
         if (f.state === 'away') onScreen = 0;
-        else if (f.visible) onScreen += DT;
+        // a struggle under the paw or lying dead cannot be cut short by an exit: not counted
+        else if (f.visible && f.state !== 'caught' && f.state !== 'dead') onScreen += DT;
         if (f.state === 'exit' && frames[i - 1].state !== 'exit') onScreen = 0;
-        // 30 s, plus a struggle under the paw (1 s) and lying dead (2.6 s) when the exit falls due right then
-        expect(onScreen).toBeLessThanOrEqual(30 + 1 + 2.6 + 0.5);
+        expect(onScreen).toBeLessThanOrEqual(31.5);
       }
     }
   });

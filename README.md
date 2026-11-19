@@ -31,7 +31,7 @@ catch. Runs in the browser on iPad, iPhone and desktop.
 ![One session's path, coloured by speed](docs/trace.png)
 
 `?trace&seed=7` draws a whole simulated session like this; `?demo` lets a pretend cat play. `node e2e/shots.ts`
-in `ui/` (with `npm run preview` running and ffmpeg installed) remakes both images.
+in `ui/` (with `npm run preview` running and ffmpeg installed) remakes both images in `docs/`.
 
 ## Development
 

@@ -16,6 +16,12 @@ export class VirtualCat {
     private readonly every: [number, number] = [1.5, 5],
     /** Chance a pounce lands on the body. */
     private readonly aim = 0.35,
+    /**
+     * Pounce only on prey out on the screen, never on a head peeking in at the edge: the ?demo cat, so the README
+     * GIF shows a hunt and not a head at the edge. The tests' cat leaves it off, since a real cat does tap a peeking
+     * head.
+     */
+    private readonly openOnly = false,
   ) {
     this.rng = new Rng(seed ^ 0x5eed);
     this.wait = this.rng.range(...every);
@@ -32,8 +38,12 @@ export class VirtualCat {
     this.wait -= dt;
     if (this.wait > 0) return;
     this.wait = this.rng.range(...this.every);
-    // Pounces on prey out on the screen, not on a head peeking in at the edge.
-    const p = s.all.find((q) => q.catchable && ['creep', 'freeze', 'bolt', 'edge', 'lure'].includes(q.state));
+    // Out on the screen: the prey's own states, or a peek that is emerging in full. A prey running off ('exit') is
+    // left to go.
+    const open = (q: (typeof s.all)[number]) =>
+      ['creep', 'freeze', 'bolt', 'edge', 'lure'].includes(q.state) ||
+      ((q.state === 'peek' || q.state === 'enter') && q.sub === 'emerge');
+    const p = s.all.find((q) => q.catchable && (!this.openOnly || open(q)));
     if (!p) return;
     const rng = this.rng;
     const off = rng.chance(this.aim) ? rng.range(0, p.r) : rng.range(2, 7) * p.r;
