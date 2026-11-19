@@ -22,9 +22,8 @@ Canvas 2D. `backend/`: Go (ship kit), serves the embedded UI only (no database).
 - Pause: two opposite spots held 1.5 s, inset 12 % (iOS delays touches at the screen edge; one paw cannot hold two).
 - Flee goes to the nearest wall away from the paw, not the longest open run: the `?trace` view showed screensaver
   arcs through the middle with the longer runs.
-- Escape (user): after 2 hits in a row (no missed pounce between), and on 25 % of single hits, the freed prey runs
-  off screen at blitz speed in a zigzag. Edge chosen ~0.6 shorts away, not the nearest: pressed to a wall the run
-  was over before a swerve showed.
+- Escape after hits in a row, zigzagging off screen: the user's wish. Edge chosen ~0.6 shorts away, not the nearest:
+  pressed to a wall the run was over before a swerve showed.
 - A peeking prey that is scared or hit ducks out and peeks again; it does not leave for good (it was away ~70 % of
   the time with a cat at the edge).
 

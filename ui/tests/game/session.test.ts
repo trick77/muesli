@@ -308,7 +308,7 @@ describe('escape after hits', () => {
     expect(checked).toBeGreaterThan(0);
   });
 
-  it('sometimes escapes after a single hit, a missed pounce breaks the streak', () => {
+  it('sometimes escapes after a single hit', () => {
     let escaped = 0;
     let n = 0;
     for (let seed = 1; seed <= 80; seed++) {
@@ -318,21 +318,55 @@ describe('escape after hits', () => {
       const state = hitAndRelease(s, 1);
       n++;
       if (state === 'exit' && p.zigzag) escaped++;
-      if (seed === 1) {
-        s.pointer('down', 50, { x: 1, y: 1 }, 'touch');
-        expect(s.streak).toBe(0);
-      }
     }
     expect(escaped / n).toBeGreaterThan(0.1);
     expect(escaped / n).toBeLessThan(0.45);
   });
 
-  it('does not escape when the hit kills, nor in the finale', () => {
+  it('does not escape when the hit kills', () => {
     const s = session(4);
     const p = untilOnScreen(s);
     p.lives = 1;
-    s.streak = 5;
     expect(hitAndRelease(s, 1)).toBe('dead');
+    expect(s.streak).toBe(0);
+  });
+
+  it('never lets the finale’s last prey escape, however often it is hit', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const s = session(seed, { length: 5 });
+      while (s.director.phase === 'hunt') s.step(DT);
+      const p = s.prey;
+      for (let i = 0; i < 60 * 10 && !p.catchable; i++) s.step(DT);
+      p.lives = 99;
+      for (let k = 0; k < 3; k++) {
+        for (let i = 0; i < 60 && !p.catchable; i++) s.step(DT);
+        if (!p.catchable) break;
+        hitAndRelease(s, 10 + k);
+        expect(p.zigzag, `seed ${seed}`).toBe(false);
+      }
+    }
+  });
+
+  it('a missed pounce between two hits leaves only the single-hit chance', () => {
+    let tried = 0;
+    let escaped = 0;
+    for (let seed = 1; seed <= 80; seed++) {
+      const s = session(seed);
+      const p = untilOnScreen(s);
+      p.lives = 99;
+      if (hitAndRelease(s, 1) === 'exit') continue;
+      for (let i = 0; i < 20 && !p.catchable; i++) s.step(DT);
+      if (!p.catchable) continue;
+      s.pointer('down', 2, { x: 1, y: 1 }, 'touch');
+      s.pointer('up', 2, { x: 1, y: 1 }, 'touch');
+      expect(s.streak).toBe(0);
+      if (!p.catchable || p.state === 'exit') continue;
+      tried++;
+      hitAndRelease(s, 3);
+      if (p.zigzag) escaped++;
+    }
+    expect(tried).toBeGreaterThan(20);
+    expect(escaped / tried).toBeLessThan(0.5);
   });
 });
 
