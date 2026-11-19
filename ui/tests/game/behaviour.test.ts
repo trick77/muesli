@@ -156,8 +156,8 @@ describe('leaving the screen', () => {
         if (f.state === 'away') onScreen = 0;
         else if (f.visible) onScreen += DT;
         if (f.state === 'exit' && frames[i - 1].state !== 'exit') onScreen = 0;
-        // 30 s plus a struggle under the paw or a peek to finish
-        expect(onScreen).toBeLessThanOrEqual(31.5);
+        // 30 s, plus a struggle under the paw (1 s) and lying dead (2.6 s) when the exit falls due right then
+        expect(onScreen).toBeLessThanOrEqual(30 + 1 + 2.6 + 0.5);
       }
     }
   });

@@ -149,20 +149,21 @@ function drawBeetle(ctx: CanvasRenderingContext2D, v: PreyView) {
   const r = v.r;
   // tripod gait: legs 0, 3, 4 swing together against 1, 2, 5
   const phase = v.still ? Math.sin(v.t * 9) * Math.sin(v.t * 2.1) * 0.25 : Math.sin(v.walked / (0.55 * r)) * 0.55;
-  const legs: [number, number, number][] = [
-    [0.55, -1, 0],
-    [0.55, 1, 1],
-    [0, -1, 1],
-    [0, 1, 0],
-    [-0.55, -1, 0],
-    [-0.55, 1, 1],
+  // [along the body, side, gait group, splay]: front legs reach forward, hind legs back, like an insect's
+  const legs: [number, number, number, number][] = [
+    [0.55, -1, 0, 0.75],
+    [0.55, 1, 1, 0.75],
+    [0, -1, 1, 0.1],
+    [0, 1, 0, 0.1],
+    [-0.55, -1, 0, -0.75],
+    [-0.55, 1, 1, -0.75],
   ];
   ctx.lineWidth = 0.38 * r;
   const n = legCount(v.wounds);
   for (let i = 0; i < n; i++) {
-    const [lx, side, group] = legs[i];
+    const [lx, side, group, splay] = legs[i];
     const swing = group ? phase : -phase;
-    const a = side * (Math.PI / 2) + swing * side;
+    const a = side * (Math.PI / 2 - splay) + swing * side;
     const x0 = lx * r;
     const y0 = side * 0.55 * r;
     ctx.beginPath();
