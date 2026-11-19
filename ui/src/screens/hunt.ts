@@ -134,8 +134,8 @@ export class HuntScreen implements Screen {
     this.finished = true;
     const s = this.session;
     settings.lastLook = s.look;
-    // Every session counts (sessions, longest); only a touch screen's exposure and touches feed the weights.
-    settings.learn = merge(settings.learn, s.director.touch ? s.tallies : {}, s.t);
+    // Every session counts (sessions, longest); only a paw on a touch screen feeds the weights, never a mouse.
+    settings.learn = merge(settings.learn, s.director.touch && s.touchSeen ? s.tallies : {}, s.t);
     this.app.replace(new DoneScreen(this.app));
   }
 

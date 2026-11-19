@@ -222,14 +222,35 @@ export class Prey {
   }
 
   /** The screen changed size (rotation): the radius follows the short edge. */
-  resized() {
+  resized(old: { w: number; h: number } = this.field) {
     this.r = radius(this.field, this.look);
     // A rotation must not leave it outside the new screen, unseen, walking toward a target that no longer exists.
-    if (['exit', 'away', 'peek', 'enter'].includes(this.state)) return;
-    const b = this.box();
-    this.pos = clampTo(b, this.pos);
+    if (this.state === 'away') return;
+    const before = { ...this.pos };
+    if (['exit', 'peek', 'enter'].includes(this.state)) {
+      // At or past an edge: it keeps to the same edge of the new screen, as far out as it was.
+      const move = (p: Vec): Vec => {
+        const f = this.field;
+        const x = p.x > old.w / 2 ? p.x + f.w - old.w : p.x;
+        const y = p.y > old.h / 2 ? p.y + f.h - old.h : p.y;
+        const m = this.r * 2;
+        const inX = p.x >= 0 && p.x <= old.w;
+        const inY = p.y >= 0 && p.y <= old.h;
+        return {
+          x: inX ? Math.max(m, Math.min(f.w - m, x)) : x,
+          y: inY ? Math.max(m, Math.min(f.h - m, y)) : y,
+        };
+      };
+      this.pos = move(this.pos);
+      if (this.target) this.target = move(this.target);
+    } else {
+      const b = this.box();
+      this.pos = clampTo(b, this.pos);
+      if (this.target) this.target = clampTo(b, this.target);
+    }
     this.prev = { ...this.pos };
-    if (this.target) this.target = clampTo(b, this.target);
+    // the tail must not streak from where it was to where it is now
+    if (dist(before, this.pos) > 1) this.trail = [];
   }
 
   get S() {

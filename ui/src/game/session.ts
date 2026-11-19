@@ -75,10 +75,11 @@ export class Session {
 
   /** The screen changed size: the prey keep this same field object. */
   resize(w: number, h: number, inset: Field['inset']) {
+    const old = { w: this.field.w, h: this.field.h };
     this.field.w = w;
     this.field.h = h;
     this.field.inset = inset;
-    for (const p of this.all) p.resized();
+    for (const p of this.all) p.resized(old);
   }
 
   step(dt: number) {
