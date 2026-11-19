@@ -40,8 +40,9 @@ export class Session {
   events: GameEvent[] = [];
   hits = 0;
   misses = 0;
-  /** Hits since the last missed pounce. */
+  /** Hits in a row on `streakOf` since the last missed pounce, and since it was last off screen. */
   streak = 0;
+  private streakOf: Prey | null = null;
   /** A paw (not a mouse) touched: only then is there anything to learn. */
   touchSeen = false;
   /** Touches and visible seconds per trait, for learn.ts. */
@@ -131,6 +132,8 @@ export class Session {
 
   private handle(p: Prey, e: PreyEvent) {
     const d = this.director;
+    // Gone from view, the run of hits is over: the next one is a first hit again.
+    if ((e.kind === 'away' || e.kind === 'gone') && p === this.streakOf) this.streak = 0;
     if (e.kind === 'away') {
       if (p === this.extra) {
         this.extra = null;
@@ -221,11 +224,14 @@ export class Session {
         this.misses = 0;
         this.director.hit();
         this.tally(p, 't', 1);
-        // Hits in a row drive it off the screen; now and then a first one already does.
+        // Hits in a row on this same animal drive it off the screen; now and then a first one already does.
+        if (p !== this.streakOf) this.streak = 0;
+        this.streakOf = p;
         this.streak++;
         const escape = this.streak >= ESCAPE_STREAK || this.rng.chance(ESCAPE_FIRST);
         if (escape) this.streak = 0;
         if (p.hit(s.b, escape)) {
+          this.streak = 0;
           this.director.killed();
           p.events.push({ kind: 'kill', x: p.pos.x, y: p.pos.y });
         }

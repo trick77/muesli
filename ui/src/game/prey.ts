@@ -379,6 +379,8 @@ export class Prey {
     this.stateT = 0;
     this.fleeing = false;
     this.zigzag = false;
+    // an escape's wide swerve must not carry into the next run
+    this.jinkOff = 0;
     this.target = null;
     this.sub = 'go';
     this.subT = 0;
@@ -477,7 +479,7 @@ export class Prey {
         return;
       case 'exit':
         if (!onScreen(this.field, this.pos, this.r * 1.6) || this.stateT > this.stateDur) return this.leave();
-        if (this.zigzag) this.jinks(dt, ZIGZAG_EVERY, ZIGZAG);
+        if (this.zigzag) this.jinks(dt, ZIGZAG_EVERY, ZIGZAG, true);
         return;
       case 'caught':
         if (this.stateT >= this.stateDur) {
@@ -523,12 +525,15 @@ export class Prey {
     if (this.stateT >= this.stateDur) this.next();
   }
 
-  /** Sudden swerves off the line to the target, alternating sides more often than not. */
-  private jinks(dt: number, every: readonly [number, number], size: readonly [number, number]) {
+  /**
+   * Sudden swerves off the line to the target. A bolt's swerves fall to either side (two the same way bend it into
+   * an arc); an escape's `zigzag` mostly swaps sides.
+   */
+  private jinks(dt: number, every: readonly [number, number], size: readonly [number, number], zigzag = false) {
     this.jinkT -= dt;
     if (this.jinkT > 0) return;
     this.jinkT = this.rng.range(...every);
-    const side = this.jinkOff === 0 || this.rng.chance(0.25) ? this.rng.sign() : -Math.sign(this.jinkOff);
+    const side = zigzag && this.jinkOff !== 0 && !this.rng.chance(0.25) ? -Math.sign(this.jinkOff) : this.rng.sign();
     this.jinkOff = side * this.rng.range(...size);
   }
 
@@ -547,7 +552,7 @@ export class Prey {
     for (const s of SIDES) {
       const n = outward(s);
       const toward = n.x * ax + n.y * ay;
-      if (toward < -0.2) continue; // never back past the paw
+      if (toward < 0) continue; // never toward the paw, not even sideways past it
       const d =
         s === 'left' ? this.pos.x : s === 'right' ? f.w - this.pos.x : s === 'top' ? this.pos.y : f.h - this.pos.y;
       // a run of about 0.6 short edges: long enough for several swerves, short enough to be gone in a second
@@ -621,7 +626,17 @@ export class Prey {
 
   private leave() {
     this.exitPoint = { ...this.pos };
-    const side = this.exitSide ?? nearestSide(this.box(), this.pos);
+    // The edge it really went out by (a zigzag near a corner may take the neighbouring one).
+    const f = this.field;
+    const over: Record<Side, number> = {
+      left: -this.pos.x,
+      right: this.pos.x - f.w,
+      top: -this.pos.y,
+      bottom: this.pos.y - f.h,
+    };
+    let side: Side = this.exitSide ?? 'left';
+    for (const s of SIDES) if (over[s] > over[side]) side = s;
+    if (over[side] <= 0) side = this.exitSide ?? nearestSide(this.box(), this.pos);
     this.exitSide = side;
     this.events.push({ kind: 'away', x: this.pos.x, y: this.pos.y, side });
     this.go('away');
@@ -659,6 +674,7 @@ export class Prey {
       this.setTier('blitz');
       this.stateDur = 4;
       this.target = this.across(side);
+      this.jinkT = rng.range(...this.motion.jinkEvery);
       return;
     }
     this.peekAgain = false;
@@ -964,7 +980,9 @@ export class Prey {
       const rate = this.fleeing ? TURN_FLEE : still ? TURN_STILL : this.motion.turn * (this.state === 'bolt' ? 1.6 : 1);
       this.heading = wrap(this.heading + Math.max(-rate * dt, Math.min(rate * dt, diff)));
       // Faces roughly where it goes before it speeds up; on a scare it wheels round first, never charging the paw.
-      if (Math.abs(diff) > 1.2) want = Math.min(want, (this.fleeing ? 0.1 : 0.04) * S);
+      // (an escape's swerves are meant to be taken at full speed)
+      if (Math.abs(diff) > 1.2 && !(this.state === 'exit' && this.zigzag))
+        want = Math.min(want, (this.fleeing ? 0.1 : 0.04) * S);
     } else want = 0;
     if (this.state === 'freeze' || this.state === 'caught' || this.state === 'dead' || this.state === 'away') want = 0;
     if (this.sub === 'hold' || this.sub === 'hidden' || this.sub === 'wiggle') want = 0;
