@@ -26,6 +26,7 @@ catch. Runs in the browser on iPad, iPhone and desktop.
   one (Hall, Bradshaw & Robinson 2002).
 - Only blue, cyan, yellow and lime: cats are dichromats, red reads as dark grey to them.
 - Hits leave marks: a shorter tail, a lost leg, a smaller dot. Misses tire the prey, so a clumsy cat still wins.
+- Hit twice in a row (sometimes after one hit), it wriggles free and zigzags off the screen.
 - It learns per device what this cat touches most and shows that a little more often (Pause → Statistik).
 
 ![One session's path, coloured by speed](docs/trace.png)

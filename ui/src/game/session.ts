@@ -24,6 +24,10 @@ export type GameEvent = (PreyEvent & { prey: Prey }) | { kind: 'end' } | { kind:
 
 /** Misses that tire the prey fully (40 % slower, freezes twice as long). */
 export const TIRE_MISSES = 8;
+/** Hits in a row (no missed pounce between) after which the prey escapes off the screen in a zigzag. */
+export const ESCAPE_STREAK = 2;
+/** Chance that a single hit already sends it off. */
+export const ESCAPE_FIRST = 0.25;
 
 export class Session {
   readonly rng: Rng;
@@ -36,6 +40,8 @@ export class Session {
   events: GameEvent[] = [];
   hits = 0;
   misses = 0;
+  /** Hits since the last missed pounce. */
+  streak = 0;
   /** A paw (not a mouse) touched: only then is there anything to learn. */
   touchSeen = false;
   /** Touches and visible seconds per trait, for learn.ts. */
@@ -215,7 +221,11 @@ export class Session {
         this.misses = 0;
         this.director.hit();
         this.tally(p, 't', 1);
-        if (p.hit(s.b)) {
+        // Hits in a row drive it off the screen; now and then a first one already does.
+        this.streak++;
+        const escape = this.streak >= ESCAPE_STREAK || this.rng.chance(ESCAPE_FIRST);
+        if (escape) this.streak = 0;
+        if (p.hit(s.b, escape)) {
           this.director.killed();
           p.events.push({ kind: 'kill', x: p.pos.x, y: p.pos.y });
         }
@@ -232,7 +242,10 @@ export class Session {
       if (near) this.tally(p, 't', 1);
       p.scare(s.b);
     }
-    if (s.down) this.misses++;
+    if (s.down) {
+      this.misses++;
+      this.streak = 0;
+    }
     for (const p of this.all) this.drainNow(p);
   }
 
