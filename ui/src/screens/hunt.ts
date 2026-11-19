@@ -77,7 +77,18 @@ export class HuntScreen implements Screen {
     this.session.step(dt);
     this.particles.update(dt);
     this.drain();
+    // The session may have just ended: no pause over the end screen.
+    if (this.finished) return;
     if (this.pause.update(dt)) this.app.push(new PauseScreen(this.app, this));
+  }
+
+  /** The mouse pointer would be one more thing to chase: hidden while the hunt is on top, back for menus. */
+  enter() {
+    this.app.canvas.style.cursor = 'none';
+  }
+
+  leave() {
+    this.app.canvas.style.cursor = '';
   }
 
   private drain() {
@@ -101,7 +112,14 @@ export class HuntScreen implements Screen {
         break;
       case 'away':
         // still rustling off to the side it ran to
-        if (Math.random() < 0.6) setTimeout(() => this.sound('rustle', e.x), 300 + Math.random() * 1500);
+        if (Math.random() < 0.6)
+          setTimeout(
+            () => {
+              // not over a pause, nor after the end
+              if (!this.finished && this.app.top === this) this.sound('rustle', e.x);
+            },
+            300 + Math.random() * 1500,
+          );
         break;
     }
   }
@@ -116,7 +134,8 @@ export class HuntScreen implements Screen {
     this.finished = true;
     const s = this.session;
     settings.lastLook = s.look;
-    if (s.touchSeen) settings.learn = merge(settings.learn, s.tallies, s.t);
+    // Every session counts (sessions, longest); only a touch screen's exposure and touches feed the weights.
+    settings.learn = merge(settings.learn, s.director.touch ? s.tallies : {}, s.t);
     this.app.replace(new DoneScreen(this.app));
   }
 

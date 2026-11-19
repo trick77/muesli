@@ -13,6 +13,4 @@ canvas {
   -webkit-user-select: none;
   user-select: none;
   -webkit-tap-highlight-color: transparent;
-  /* the mouse pointer would be one more thing on screen to chase */
-  cursor: none;
 }

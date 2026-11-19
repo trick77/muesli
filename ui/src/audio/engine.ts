@@ -15,9 +15,11 @@ interface Chain {
 let chain: Chain | null = null;
 let muted = false;
 let voices = 0;
+/** Silenced at a session's end: a tap or a tab switch does not wake it, only the next unlock(). */
+let hushed = false;
 
 function resume() {
-  if (chain && chain.ctx.state !== 'running') void chain.ctx.resume().catch(() => {});
+  if (chain && !hushed && chain.ctx.state !== 'running') void chain.ctx.resume().catch(() => {});
 }
 
 function start(): Chain {
@@ -55,6 +57,7 @@ function start(): Chain {
 export const audio = {
   /** Call from the first pointerdown/keydown. Safe to call repeatedly. */
   unlock() {
+    hushed = false;
     if (!chain) chain = start();
     else resume();
   },
@@ -70,7 +73,7 @@ export const audio = {
   },
   /** `pan` -1 (left) .. 1 (right): a sound comes from where the prey is, or where it vanished. */
   play(kind: Sound, pan = 0) {
-    if (!chain || muted || voices >= MAX_VOICES) return;
+    if (!chain || muted || hushed || voices >= MAX_VOICES) return;
     const { ctx, master } = chain;
     let out: AudioNode = master;
     if (ctx.createStereoPanner) {
@@ -85,7 +88,11 @@ export const audio = {
   },
   /** The session is over: nothing more to hear until the next start. */
   hush() {
+    hushed = true;
     if (chain) void chain.ctx.suspend().catch(() => {});
+  },
+  get hushed() {
+    return hushed;
   },
 };
 
@@ -94,4 +101,5 @@ export function resetAudio() {
   chain = null;
   muted = false;
   voices = 0;
+  hushed = false;
 }

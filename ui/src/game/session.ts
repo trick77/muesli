@@ -104,7 +104,8 @@ export class Session {
 
   private drive(p: Prey, leave: boolean): Drive {
     const d = this.director;
-    const easy = d.phase === 'finale';
+    // Only the main prey turns easy in the finale; a lure's second prey still leaves when sent.
+    const easy = d.phase === 'finale' && !leave;
     if (easy) return { speed: 0.55, freeze: 2, weights: {}, exitDue: false, easy: true };
     let speed = d.adapt() * (1 - 0.4 * this.tire) * (1 - 0.06 * p.wounds);
     const learned = this.opts.learned?.states ?? {};

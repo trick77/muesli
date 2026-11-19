@@ -7,19 +7,32 @@ interface Sentinel {
 }
 
 let lock: Sentinel | null = null;
+let pending: Promise<void> | null = null;
 let wanted = false;
 let watching = false;
 
-async function acquire() {
+/** One request at a time; a lock that arrives after off() goes straight back. */
+function acquire(): Promise<void> {
   const wl = (navigator as unknown as { wakeLock?: { request(t: 'screen'): Promise<Sentinel> } }).wakeLock;
-  if (!wl || lock) return;
-  try {
-    lock = await wl.request('screen');
-    lock.addEventListener?.('release', () => (lock = null));
-  } catch {
-    // Not allowed (no HTTPS, battery saver): the screen may dim.
-    lock = null;
-  }
+  if (!wl || lock) return Promise.resolve();
+  pending ??= (async () => {
+    try {
+      const s = await wl.request('screen');
+      if (!wanted) {
+        await s.release().catch(() => {});
+        return;
+      }
+      lock = s;
+      s.addEventListener?.('release', () => {
+        if (lock === s) lock = null;
+      });
+    } catch {
+      // Not allowed (no HTTPS, battery saver): the screen may dim.
+    } finally {
+      pending = null;
+    }
+  })();
+  return pending;
 }
 
 /** Keeps the screen on during a hunt; the system drops the lock when the page hides, so it comes back on return. */

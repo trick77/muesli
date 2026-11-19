@@ -224,6 +224,12 @@ export class Prey {
   /** The screen changed size (rotation): the radius follows the short edge. */
   resized() {
     this.r = radius(this.field, this.look);
+    // A rotation must not leave it outside the new screen, unseen, walking toward a target that no longer exists.
+    if (['exit', 'away', 'peek', 'enter'].includes(this.state)) return;
+    const b = this.box();
+    this.pos = clampTo(b, this.pos);
+    this.prev = { ...this.pos };
+    if (this.target) this.target = clampTo(b, this.target);
   }
 
   get S() {

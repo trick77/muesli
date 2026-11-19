@@ -61,6 +61,22 @@ describe('audio engine', () => {
     expect(VOLUME).toBeLessThan(0.5);
   });
 
+  it('stays hushed after the session: a tap or a tab switch does not wake it, the next start does', () => {
+    audio.unlock();
+    audio.hush();
+    expect(audio.hushed).toBe(true);
+    const n = win.audio.made.length;
+    audio.play('squeak');
+    expect(win.audio.made.length).toBe(n);
+    for (const f of win.listeners.pointerdown) f({});
+    for (const f of win.listeners.visibilitychange) f({});
+    expect(audio.hushed).toBe(true);
+    audio.unlock();
+    expect(audio.hushed).toBe(false);
+    audio.play('squeak');
+    expect(win.audio.made.length).toBeGreaterThan(n);
+  });
+
   it('drops sounds beyond the voice limit until some end', () => {
     audio.unlock();
     for (let i = 0; i < MAX_VOICES; i++) audio.play('rustle');
