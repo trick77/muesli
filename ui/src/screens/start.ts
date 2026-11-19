@@ -9,7 +9,10 @@ import { HuntScreen, type HuntOpts } from './hunt';
 import { StatsScreen } from './stats';
 import { button, inside, text, unit, type Rect } from './ui';
 
-/** Starts a hunt: inside the tap, so audio, wake lock and fullscreen are allowed. */
+/**
+ * Starts a hunt: inside the tap's release (pointerup), so audio, wake lock and fullscreen are allowed. A touch's
+ * pointerdown would do for audio but not for fullscreen on an iPad.
+ */
 export function startHunt(app: App, opts: HuntOpts = {}) {
   audio.unlock();
   audio.setMuted(settings.muted);
@@ -24,6 +27,7 @@ export class StartScreen implements Screen {
   private sound: Rect = { x: 0, y: 0, w: 0, h: 0 };
   private length: Rect = { x: 0, y: 0, w: 0, h: 0 };
   private stats: Rect = { x: 0, y: 0, w: 0, h: 0 };
+  private pressed = new Set<number>();
 
   constructor(
     private readonly app: App,
@@ -70,8 +74,11 @@ export class StartScreen implements Screen {
   }
 
   pointer(p: Ptr) {
+    // The start area answers the release of a tap that began on it.
+    if (p.type === 'down' && inside(this.go, p.x, p.y)) this.pressed.add(p.id);
+    if (p.type === 'up' && this.pressed.has(p.id) && inside(this.go, p.x, p.y)) return startHunt(this.app, this.opts);
+    if (p.type === 'up' || p.type === 'cancel') this.pressed.delete(p.id);
     if (p.type !== 'down') return;
-    if (inside(this.go, p.x, p.y)) return startHunt(this.app, this.opts);
     if (inside(this.sound, p.x, p.y)) {
       settings.muted = !settings.muted;
       audio.setMuted(settings.muted);
