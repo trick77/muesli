@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { App, Ptr, Screen } from '../../src/app';
-import { resetAudio } from '../../src/audio/engine';
+import { audio, resetAudio } from '../../src/audio/engine';
 import { DoneScreen, RESTART_HOLD } from '../../src/screens/done';
 import { HuntScreen, PAUSE_HOLD, PAUSE_SPOTS, view } from '../../src/screens/hunt';
 import { PauseScreen } from '../../src/screens/pause';
@@ -22,6 +22,7 @@ function fakeApp() {
     w: W,
     h: H,
     alpha: 0.5,
+    canvas: { style: {} as Record<string, string> },
     get top() {
       return stack[stack.length - 1];
     },
@@ -97,6 +98,62 @@ describe('start screen', () => {
     app.replace(s2);
     s2.key!({ key: 'Enter' } as KeyboardEvent, true);
     expect(stack.at(-1)!.name).toBe('hunt');
+  });
+});
+
+describe('hunt screen, review fixes', () => {
+  it('hides the mouse pointer only while the hunt is on top', () => {
+    const { app } = fakeApp();
+    const h = new HuntScreen(app, { seed: 1 });
+    app.replace(h);
+    expect(app.canvas.style.cursor).toBe('none');
+    h.leave();
+    expect(app.canvas.style.cursor).toBe('');
+  });
+
+  it('never opens the pause over the end screen', () => {
+    const { app, stack } = fakeApp();
+    const h = new HuntScreen(app, { seed: 2 });
+    app.replace(h);
+    const [a, b] = PAUSE_SPOTS.map(([fx, fy]) => [fx * W, fy * H]);
+    h.pointer(ptr('down', a[0], a[1], 1));
+    h.pointer(ptr('down', b[0], b[1], 2));
+    h.pause.progress = 0.999;
+    h.session.events.push({ kind: 'end' });
+    h.update(1 / 60);
+    expect(stack.map((s) => s.name)).toEqual(['done']);
+  });
+
+  it('counts a session without any touch, and a desktop one, but learns nothing from it', () => {
+    stubWindow({ touch: false });
+    settings.minutes = 2;
+    const { app, stack } = fakeApp();
+    const h = new HuntScreen(app, { seed: 3 });
+    app.replace(h);
+    for (let i = 0; i < 60 * 160 && stack.at(-1) === h; i++) h.update(1 / 60);
+    expect(stack.at(-1)!.name).toBe('done');
+    expect(settings.learn.sessions).toBe(1);
+    expect(settings.learn.longest).toBeGreaterThan(119);
+    expect(settings.learn.feats).toEqual({});
+  });
+
+  it('drops the late rustle of a prey that left once the hunt is paused', () => {
+    vi.useFakeTimers();
+    try {
+      const { app } = fakeApp();
+      const h = new HuntScreen(app, { seed: 4 });
+      app.replace(h);
+      const play = vi.spyOn(audio, 'play');
+      vi.spyOn(Math, 'random').mockReturnValue(0.1);
+      h.session.events.push({ kind: 'away', x: 0, y: 0, side: 'left', prey: h.session.prey });
+      h.update(1 / 60);
+      app.push(new PauseScreen(app, h));
+      vi.advanceTimersByTime(3000);
+      expect(play.mock.calls.filter((c) => c[0] === 'rustle' && c[1] === -1)).toHaveLength(0);
+    } finally {
+      vi.restoreAllMocks();
+      vi.useRealTimers();
+    }
   });
 });
 

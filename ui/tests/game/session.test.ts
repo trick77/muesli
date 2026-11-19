@@ -210,10 +210,29 @@ describe('session', () => {
     const s = session(9);
     const p = untilOnScreen(s);
     const r = p.r;
+    p.pos = { x: 1100, y: 400 };
     s.resize(600, 900, { top: 40, right: 0, bottom: 30, left: 0 });
     expect(p.r).toBeLessThan(r);
+    // pulled into the new screen, not left outside unseen
+    expect(p.pos.x).toBeLessThanOrEqual(600);
+    expect(p.visible).toBe(true);
     for (let i = 0; i < 120; i++) s.step(DT);
     expect(s.field.w).toBe(600);
+  });
+
+  it('sends a lure’s second prey off when the finale starts', () => {
+    let checked = 0;
+    for (let seed = 1; seed <= 30 && checked < 3; seed++) {
+      const s = session(seed, { length: 40 });
+      for (let i = 0; i < 60 * 39 && !s.extra; i++) s.step(DT);
+      if (!s.extra) continue;
+      while (s.director.phase === 'hunt') s.step(DT);
+      // the extra runs off and is dropped well before the finale's 15 s are up
+      for (let i = 0; i < 60 * 8 && s.extra; i++) s.step(DT);
+      expect(s.extra, `seed ${seed}`).toBeNull();
+      checked++;
+    }
+    expect(checked).toBeGreaterThan(0);
   });
 });
 

@@ -104,6 +104,8 @@ describe('app', () => {
       return e;
     };
     expect(down('Escape').preventDefault).toHaveBeenCalled();
+    // a held key's repeats do not reach the screen (Escape would toggle the pause)
+    expect(down('Escape', { repeat: true }).preventDefault).toHaveBeenCalled();
     expect(down('r', { metaKey: true }).preventDefault).not.toHaveBeenCalled();
     expect(down('F5').preventDefault).not.toHaveBeenCalled();
     for (const f of win.listeners.keyup) f({ key: 'Escape' });

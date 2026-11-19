@@ -79,6 +79,22 @@ describe('device', () => {
     await wakeLock.off();
   });
 
+  it('gives back a lock that arrives after off(), and asks only once at a time', async () => {
+    stubWindow();
+    const release = vi.fn(async () => {});
+    let grant: (s: unknown) => void = () => {};
+    const request = vi.fn(() => new Promise((r) => (grant = r)));
+    vi.stubGlobal('navigator', { wakeLock: { request } });
+    const on = wakeLock.on();
+    void wakeLock.on();
+    expect(request).toHaveBeenCalledTimes(1);
+    await wakeLock.off();
+    grant({ release });
+    await on;
+    expect(release).toHaveBeenCalled();
+    expect(wakeLock.held).toBe(false);
+  });
+
   it('copes without a wake lock or with a refusal', async () => {
     stubWindow();
     await wakeLock.on();

@@ -151,8 +151,10 @@ export class App {
     addEventListener('keydown', (e) => {
       // shortcuts and function keys (reload, full screen, dev tools) stay the browser's
       if (e.metaKey || e.ctrlKey || e.altKey || /^F\d+$/.test(e.key)) return;
-      this.top?.key?.(e, true);
       e.preventDefault();
+      // A held key repeats: Escape would toggle the pause open and shut thirty times a second.
+      if (e.repeat) return;
+      this.top?.key?.(e, true);
     });
     addEventListener('keyup', (e) => this.top?.key?.(e, false));
   }
