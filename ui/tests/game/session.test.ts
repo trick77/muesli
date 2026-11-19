@@ -220,6 +220,28 @@ describe('session', () => {
     expect(s.field.w).toBe(600);
   });
 
+  it('keeps a peeking prey at its edge of the turned screen, and drops a stale tail', () => {
+    for (let seed = 1; seed <= 40; seed++) {
+      const s = session(seed);
+      let p = s.prey;
+      for (let i = 0; i < 60 * 30; i++) {
+        s.step(DT);
+        p = s.prey;
+        if ((p.state === 'peek' || p.state === 'enter') && p.sub === 'hold' && p.pos.x > s.field.w) break;
+      }
+      if (!(p.sub === 'hold' && p.pos.x > s.field.w)) continue;
+      const out = p.pos.x - s.field.w;
+      p.trail = [{ x: 1, y: 1 }];
+      s.resize(600, 900, { top: 0, right: 0, bottom: 0, left: 0 });
+      expect(p.pos.x - 600).toBeCloseTo(out);
+      expect(p.pos.y).toBeLessThanOrEqual(900);
+      expect(p.visible).toBe(true);
+      expect(p.trail).toEqual([]);
+      return;
+    }
+    throw new Error('no seed peeked from the right');
+  });
+
   it('sends a lure’s second prey off when the finale starts', () => {
     let checked = 0;
     for (let seed = 1; seed <= 30 && checked < 3; seed++) {

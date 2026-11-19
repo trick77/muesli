@@ -62,6 +62,28 @@ test('two opposite spots held pause the hunt, one spot does not', async ({ page 
   await expect.poll(() => top(page), { timeout: 4000 }).toBe('pause');
 });
 
+test('the service worker caches the page once and only the current build', async ({ page }) => {
+  await page.goto('/?seed=1');
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.goto('/?seed=2');
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const c = await caches.open('muesli-v2');
+        return (await c.keys()).map((r) => new URL(r.url).pathname);
+      }),
+    )
+    .toContain('/');
+  const paths = await page.evaluate(async () => {
+    const c = await caches.open('muesli-v2');
+    return (await c.keys()).map((r) => new URL(r.url).pathname + new URL(r.url).search);
+  });
+  // one page, whatever its query string
+  expect(paths.filter((p) => p.startsWith('/?'))).toEqual([]);
+  expect(paths.some((p) => p.includes('/assets/'))).toBe(true);
+});
+
 test('serves the manifest and the service worker relative to the page', async ({ page, request }) => {
   await page.goto('/');
   const href = await page.locator('link[rel=manifest]').getAttribute('href');
