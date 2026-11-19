@@ -1,0 +1,17 @@
+import './style.css';
+import { App } from './app';
+import { HuntScreen } from './screens/hunt';
+import { StartScreen } from './screens/start';
+import { TraceScreen } from './screens/trace';
+
+const q = new URLSearchParams(location.search);
+const seed = q.has('seed') ? Number(q.get('seed')) >>> 0 : undefined;
+const app = new App(document.getElementById('screen') as HTMLCanvasElement);
+// ?trace: a whole session's path at a glance. ?demo: a pretend cat plays (screenshots). ?seed=N: a fixed session.
+if (q.has('trace')) app.replace(new TraceScreen(app, seed ?? 1, Number(q.get('trace')) || 120));
+else if (q.has('demo')) app.replace(new HuntScreen(app, { seed, demo: true }));
+else app.replace(new StartScreen(app, { seed }));
+// Hook for the end-to-end tests.
+(window as unknown as { __app: App }).__app = app;
+if ('serviceWorker' in navigator && import.meta.env.PROD)
+  navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {});
