@@ -8,6 +8,7 @@ import { StartScreen } from '../../src/screens/start';
 import { mmss, StatsScreen } from '../../src/screens/stats';
 import { simulate, TraceScreen } from '../../src/screens/trace';
 import { Hold, inside, restartIcon, unit } from '../../src/screens/ui';
+import { setLang } from '../../src/platform/i18n';
 import { settings } from '../../src/platform/settings';
 import { empty, merge } from '../../src/game/learn';
 import { recCtx, stubWindow, texts, type Call } from '../stubs';
@@ -57,6 +58,8 @@ function draw(s: Screen) {
 beforeEach(() => {
   stubWindow({ touch: true });
   resetAudio();
+  // Pinned: the default must not follow the machine's locale.
+  setLang('de');
 });
 afterEach(() => vi.unstubAllGlobals());
 
@@ -349,6 +352,42 @@ describe('trace view', () => {
     const calls = draw(t);
     expect(texts(calls)).toEqual(expect.arrayContaining(['Stopp', 'Sprint', 'Blitz']));
     expect(calls.filter((c) => c[0] === 'lineTo').length).toBeGreaterThan(100);
+  });
+});
+
+describe('in English', () => {
+  beforeEach(() => setLang('en'));
+
+  it('draws every screen in English', () => {
+    settings.learn = merge(empty(), { 'variant:mouse': { t: 6, s: 60 }, 'color:lime': { t: 6, s: 60 } }, 95);
+    const { app } = fakeApp();
+    const s = new StartScreen(app);
+    app.replace(s);
+    expect(texts(draw(s))).toEqual(
+      expect.arrayContaining([
+        'A hunting game for cats',
+        'Tap to start',
+        'Sound: on',
+        'Length: 2 min',
+        'Stats',
+        'Full screen: Share → Add to Home Screen',
+      ]),
+    );
+    const h = new HuntScreen(app, { seed: 8 });
+    app.replace(h);
+    expect(texts(draw(new PauseScreen(app, h)))).toEqual(expect.arrayContaining(['Pause', 'Resume', 'Quit']));
+    const st = texts(draw(new StatsScreen(app)));
+    expect(st).toEqual(expect.arrayContaining(['Mouse', 'Lime', 'Shape', 'Colour', '6.0/min']));
+    expect(st).toContain('Sessions: 1   With touches: 1   Longest: 1:35');
+    expect(st).toContain('Weighting starts after 3 sessions with touches.');
+    expect(texts(draw(new DoneScreen(app)))).toEqual(
+      expect.arrayContaining(['Done. Time for a treat.', 'Hold for a new round', 'Settings (hold)']),
+    );
+    const tr = new TraceScreen(app, 3, 5);
+    tr.resize(W, H);
+    const tt = texts(draw(tr));
+    expect(tt).toEqual(expect.arrayContaining(['Still', 'Creep', 'Bolt']));
+    expect(tt.some((x) => /^Seed 3, \d+ s {3}· still {2}✕ exit {2}○ hit$/.test(x))).toBe(true);
   });
 });
 

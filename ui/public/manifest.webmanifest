@@ -1,8 +1,8 @@
 {
   "name": "Müsli",
   "short_name": "Müsli",
-  "description": "Ein Jagdspiel für Katzen: Beute auf schwarzem Grund, mit der Pfote zu fangen.",
-  "lang": "de",
+  "description": "A hunting game for cats: prey on black, caught with a paw.",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "fullscreen",

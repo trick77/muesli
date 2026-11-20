@@ -1,6 +1,7 @@
 // Paused: the hunt stands still underneath. Ordinary taps here: a human opened it with two hands.
 import type { App, Ptr, Screen } from '../app';
 import { audio } from '../audio/engine';
+import { t } from '../platform/i18n';
 import { settings } from '../platform/settings';
 import { wakeLock } from '../platform/device';
 import type { HuntScreen } from './hunt';
@@ -40,13 +41,14 @@ export class PauseScreen implements Screen {
     ctx.fillStyle = 'rgba(0,0,0,0.75)';
     ctx.fillRect(0, 0, w, h);
     const u = unit(w, h);
-    text(ctx, 'Pause', w / 2, h * 0.2, 1.8 * u, UI_BRIGHT, 'center', 600);
+    const tx = t();
+    text(ctx, tx.pause, w / 2, h * 0.2, 1.8 * u, UI_BRIGHT, 'center', 600);
     this.resize(w, h);
     const labels: Record<Item, string> = {
-      resume: 'Weiter',
-      sound: `Ton: ${settings.muted ? 'aus' : 'an'}`,
-      stats: 'Statistik',
-      quit: 'Beenden',
+      resume: tx.resume,
+      sound: tx.sound(!settings.muted),
+      stats: tx.stats,
+      quit: tx.quit,
     };
     for (const it of ITEMS) button(ctx, this.rects[it], labels[it], u, it === 'resume');
   }

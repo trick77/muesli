@@ -1,10 +1,14 @@
 import './style.css';
 import { App } from './app';
 import { keepFullscreen } from './platform/device';
+import { getLang, pick, setLang } from './platform/i18n';
 import { HuntScreen } from './screens/hunt';
 import { StartScreen } from './screens/start';
 import { TraceScreen } from './screens/trace';
 
+// The browser's language for the human's texts: German or English, English for everything else.
+setLang(pick(navigator.languages));
+document.documentElement.lang = getLang();
 const q = new URLSearchParams(location.search);
 const seed = q.has('seed') ? Number(q.get('seed')) >>> 0 : undefined;
 const app = new App(document.getElementById('screen') as HTMLCanvasElement);

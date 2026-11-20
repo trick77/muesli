@@ -3,6 +3,7 @@
 import type { App, Ptr, Screen } from '../app';
 import { audio } from '../audio/engine';
 import { wakeLock } from '../platform/device';
+import { t } from '../platform/i18n';
 import { UI_DIM, UI_TEXT } from '../render/palette';
 import { startHunt, StartScreen } from './start';
 import { Hold, restartIcon, ring, text, unit } from './ui';
@@ -35,11 +36,12 @@ export class DoneScreen implements Screen {
 
   draw(ctx: CanvasRenderingContext2D, w: number, h: number) {
     const u = unit(w, h);
-    text(ctx, 'Fertig. Zeit für ein Leckerli.', w / 2, h * 0.3, u, UI_TEXT);
+    const tx = t();
+    text(ctx, tx.done, w / 2, h * 0.3, u, UI_TEXT);
     restartIcon(ctx, w / 2, h / 2, 2.4 * u, UI_DIM);
     if (this.restart.progress > 0) ring(ctx, w / 2, h / 2, 2.8 * u, this.restart.progress);
-    text(ctx, 'Halten für eine neue Runde', w / 2, h / 2 + 3.6 * u, 0.7 * u, UI_DIM);
-    text(ctx, 'Einstellungen (halten)', w / 2, h * 0.88, 0.7 * u, UI_DIM);
+    text(ctx, tx.restartHint, w / 2, h / 2 + 3.6 * u, 0.7 * u, UI_DIM);
+    text(ctx, tx.menuHint, w / 2, h * 0.88, 0.7 * u, UI_DIM);
     if (this.menu.progress > 0) ring(ctx, w / 2, h * 0.88, 1.2 * u, this.menu.progress);
   }
 

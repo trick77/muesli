@@ -3,6 +3,7 @@ import type { App, Ptr, Screen } from '../app';
 import { audio } from '../audio/engine';
 import { GAME_NAME } from '../brand';
 import { canFullscreen, enterFullscreen, standalone, wakeLock } from '../platform/device';
+import { t } from '../platform/i18n';
 import { LENGTHS, settings } from '../platform/settings';
 import { UI_BRIGHT, UI_TEXT } from '../render/palette';
 import { HuntScreen, type HuntOpts } from './hunt';
@@ -62,15 +63,15 @@ export class StartScreen implements Screen {
     this.layout(w, h);
     const u = unit(w, h);
     text(ctx, GAME_NAME, w / 2, h * 0.13, 2.6 * u, UI_BRIGHT, 'center', 600);
-    text(ctx, 'Ein Jagdspiel für Katzen', w / 2, h * 0.13 + 2.2 * u, 0.9 * u);
-    button(ctx, this.go, 'Tippen zum Starten', 1.4 * u, true);
-    button(ctx, this.sound, `Ton: ${settings.muted ? 'aus' : 'an'}`, 0.9 * u);
-    button(ctx, this.length, `Dauer: ${settings.minutes} Min.`, 0.9 * u);
-    button(ctx, this.stats, 'Statistik', 0.9 * u);
+    const tx = t();
+    text(ctx, tx.tagline, w / 2, h * 0.13 + 2.2 * u, 0.9 * u);
+    button(ctx, this.go, tx.tapToStart, 1.4 * u, true);
+    button(ctx, this.sound, tx.sound(!settings.muted), 0.9 * u);
+    button(ctx, this.length, tx.length(settings.minutes), 0.9 * u);
+    button(ctx, this.stats, tx.stats, 0.9 * u);
     const hy = this.sound.y + this.sound.h + 1.8 * u;
-    text(ctx, 'Pause: oben links und unten rechts gleichzeitig halten', w / 2, hy, 0.75 * u, UI_TEXT);
-    if (!standalone() && !canFullscreen())
-      text(ctx, 'Vollbild: Teilen → Zum Home-Bildschirm', w / 2, hy + 1.4 * u, 0.75 * u, UI_TEXT);
+    text(ctx, tx.pauseHint, w / 2, hy, 0.75 * u, UI_TEXT);
+    if (!standalone() && !canFullscreen()) text(ctx, tx.installHint, w / 2, hy + 1.4 * u, 0.75 * u, UI_TEXT);
   }
 
   pointer(p: Ptr) {
