@@ -15,6 +15,8 @@ Canvas 2D. `backend/`: Go (ship kit), serves the embedded UI only (no database).
   realistic mice failing). Tail and legs thick: the moving outline is what counts.
 - Size: radius 2.25 % of the short edge, 12..28 px. The first 4.5 % looked twice too big on desktop and iPad (user).
 - Away off screen: random 0.5..10 s, evenly drawn (user: first 20 s, then "max 10s"). Exits every 10..30 s on screen.
+- Lurk (no touch for a while) keeps looks long and gaps short: at 3 s on screen and 8..15 s away the screen sat
+  black ~10 s again and again (user).
 - Look (shape/colour/size) changes only while off screen: Hall, Bradshaw & Robinson 2002, play collapses on an
   unchanging toy and comes back for a changed one.
 - Sessions end on their own (2/3/5 min, default 2) with a catchable last prey: laser-pointer play that never ends in a

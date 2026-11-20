@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { AWAY, Director, FINALE_MAX, LURE_AFTER, LURK_AFTER, LURK_AWAY } from '../../src/game/director';
+import { AWAY, Director, FINALE_MAX, LURE_AFTER, LURK_AFTER, LURK_AWAY, LURK_SHOW } from '../../src/game/director';
 import { dist, edgeDistance } from '../../src/game/geom';
 import { Rng } from '../../src/game/prng';
 import { NEUTRAL, Prey } from '../../src/game/prey';
@@ -36,6 +36,21 @@ describe('director', () => {
     const away = d.awayFor();
     expect(away).toBeGreaterThanOrEqual(LURK_AWAY[0]);
     expect(away).toBeLessThanOrEqual(LURK_AWAY[1]);
+    // Back on screen while lurking: a look of LURK_SHOW seconds, then off again.
+    d.returned();
+    for (let t = 0; t < LURK_SHOW[0] - 0.1; t += DT) d.step(DT, true);
+    expect(d.exitDue).toBe(false);
+    for (let t = 0; t < LURK_SHOW[1] - LURK_SHOW[0] + 0.2; t += DT) d.step(DT, true);
+    expect(d.exitDue).toBe(true);
+    // Each return while lurking draws a new look length: no two looks alike.
+    const shows = new Set<number>();
+    for (let i = 0; i < 20; i++) {
+      d.returned();
+      expect(d.lurkShow).toBeGreaterThanOrEqual(LURK_SHOW[0]);
+      expect(d.lurkShow).toBeLessThanOrEqual(LURK_SHOW[1]);
+      shows.add(d.lurkShow);
+    }
+    expect(shows.size).toBeGreaterThan(10);
     d.touched();
     expect(d.mode).toBe('normal');
     expect(d.idle).toBe(0);
