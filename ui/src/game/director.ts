@@ -11,8 +11,13 @@ export type Mode = 'normal' | 'lure' | 'lurk';
 export const EXIT_GAP: [number, number] = [10, 30];
 /** Seconds the prey stays away, drawn evenly: the cat can never tell when it comes back. Was up to 20 s. */
 export const AWAY: [number, number] = [0.5, 10];
-/** Away while lurking: it only peeks now and then. */
-export const LURK_AWAY: [number, number] = [8, 15];
+/** Away while lurking. Was 8..15 s: the screen sat black ~10 s again and again (user). */
+export const LURK_AWAY: [number, number] = [3, 6];
+/**
+ * Seconds on screen per look while lurking before it turns to leave (the run off comes on top), drawn at each
+ * return. Was a fixed 3 s.
+ */
+export const LURK_SHOW: [number, number] = [5, 8];
 /** Seconds of prey on screen without a touch before luring, before lurking. */
 export const LURE_AFTER = 10;
 export const LURK_AFTER = 30;
@@ -35,6 +40,8 @@ export class Director {
   /** Seconds on screen since the prey came back. */
   sinceReturn = 0;
   exitGap: number;
+  /** Seconds on screen before the next exit while lurking. */
+  lurkShow = LURK_SHOW[0];
   finaleT = 0;
   private moodLeft: number;
   private lured = false;
@@ -56,8 +63,8 @@ export class Director {
   get exitDue(): boolean {
     if (this.phase === 'leaving') return true;
     if (this.phase !== 'hunt') return false;
-    // Lurking: a few seconds of peeking, then off again.
-    if (this.mode === 'lurk') return this.sinceReturn >= 3;
+    // Lurking: a short look, then off again.
+    if (this.mode === 'lurk') return this.sinceReturn >= this.lurkShow;
     return this.sinceReturn >= this.exitGap;
   }
 
@@ -97,8 +104,10 @@ export class Director {
       this.idle += dt;
     }
     if (this.touch) {
-      if (this.idle >= LURK_AFTER && this.mode !== 'lurk') this.mode = 'lurk';
-      else if (this.idle >= LURE_AFTER && !this.lured) {
+      if (this.idle >= LURK_AFTER && this.mode !== 'lurk') {
+        this.mode = 'lurk';
+        this.lurkShow = this.rng.range(...LURK_SHOW);
+      } else if (this.idle >= LURE_AFTER && !this.lured) {
         this.lured = true;
         this.mode = 'lure';
         return 'lure';
@@ -131,6 +140,8 @@ export class Director {
   returned() {
     this.sinceReturn = 0;
     this.exitGap = this.rng.range(...EXIT_GAP);
+    // drawn only while lurking: a session that never lurks replays its seed as before
+    if (this.mode === 'lurk') this.lurkShow = this.rng.range(...LURK_SHOW);
   }
 
   /** How long the prey stays away this time. */
