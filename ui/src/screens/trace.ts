@@ -6,6 +6,7 @@ import type { Vec } from '../game/geom';
 import type { Tier } from '../game/prey';
 import { Session } from '../game/session';
 import { VirtualCat } from '../game/virtualcat';
+import { t } from '../platform/i18n';
 import { UI_BRIGHT, UI_DIM, UI_TEXT } from '../render/palette';
 import { text, unit } from './ui';
 
@@ -15,14 +16,6 @@ export const TIER_COLOR: Record<Tier, string> = {
   trot: '#00E5FF',
   sprint: '#FFE600',
   blitz: '#B6FF00',
-};
-
-const TIER_NAME: Record<Tier, string> = {
-  still: 'Stopp',
-  creep: 'Schleichen',
-  trot: 'Trab',
-  sprint: 'Sprint',
-  blitz: 'Blitz',
 };
 
 interface Seg {
@@ -132,21 +125,14 @@ export class TraceScreen implements Screen {
     // legend
     let x = u;
     const y = h - u;
-    for (const t of Object.keys(TIER_COLOR) as Tier[]) {
-      ctx.fillStyle = TIER_COLOR[t];
+    const tx = t();
+    for (const tier of Object.keys(TIER_COLOR) as Tier[]) {
+      ctx.fillStyle = TIER_COLOR[tier];
       ctx.fillRect(x, y - 3, u, 6);
-      text(ctx, TIER_NAME[t], x + 1.3 * u, y, 0.7 * u, UI_TEXT, 'left');
+      text(ctx, tx.tiers[tier], x + 1.3 * u, y, 0.7 * u, UI_TEXT, 'left');
       x += 6.5 * u;
     }
-    text(
-      ctx,
-      `Seed ${this.seed}, ${Math.round(d.seconds)} s   · Stopp  ✕ Abgang  ○ Treffer`,
-      u,
-      y - 1.5 * u,
-      0.7 * u,
-      UI_DIM,
-      'left',
-    );
+    text(ctx, tx.traceLegend(this.seed, Math.round(d.seconds)), u, y - 1.5 * u, 0.7 * u, UI_DIM, 'left');
     void this.app;
   }
 }

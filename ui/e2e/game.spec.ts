@@ -93,3 +93,18 @@ test('serves the manifest and the service worker relative to the page', async ({
   expect(m.display).toBe('fullscreen');
   expect((await request.get('/sw.js')).ok()).toBe(true);
 });
+
+for (const [locale, lang] of [
+  ['de-CH', 'de'],
+  ['en-US', 'en'],
+  ['fr-FR', 'en'],
+] as const) {
+  test.describe(`browser language ${locale}`, () => {
+    test.use({ locale });
+    test(`picks ${lang}`, async ({ page }) => {
+      await page.goto('/');
+      await expect.poll(() => top(page)).toBe('start');
+      expect(await page.evaluate(() => document.documentElement.lang)).toBe(lang);
+    });
+  });
+}
