@@ -52,6 +52,7 @@ export class HuntScreen implements Screen {
       field: { w: app.w, h: app.h, inset: safeArea() },
       length: settings.minutes * 60,
       touch: touchScreen() || !!opts.demo,
+      handheld: touchScreen(),
       learned: weights(learn),
       lastLook: settings.lastLook,
     });

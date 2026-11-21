@@ -14,9 +14,14 @@ Canvas 2D. `backend/`: Go (ship kit), serves the embedded UI only (no database).
 - Shapes: flat silhouettes, no eyes or inner detail (cats see coarse up close; a GDC 2019 cat-game talk reported
   realistic mice failing). Tail and legs thick: the moving outline is what counts.
 - Size: radius 2.25 % of the short edge, 12..28 px. The first 4.5 % looked twice too big on desktop and iPad (user).
+- Touch screens get bigger (x1.4), busier prey (more bolts, fewer creeps and freezes, a bit faster): in mm an iPad is
+  half a 34" monitor (mouse ~11 vs ~20 mm, creep 8..32 mm/s), and the cat played far more at the monitor (user).
+  Keyed on touch, not CSS px: a 24" 1080p window and an iPad 11" have about the same short edge in px (a big touch
+  monitor gets the iPad tuning; accepted). `?demo`/`?trace` on a desktop keep the desktop prey (`handheld`).
 - Away off screen: random 0.5..10 s, evenly drawn (user: first 20 s, then "max 10s"). Exits every 10..30 s on screen.
 - Lurk (no touch for a while) keeps looks long and gaps short: at 3 s on screen and 8..15 s away the screen sat
-  black ~10 s again and again (user).
+  black ~10 s again and again (user). It starts after 60 s of prey on screen without a touch, not 30: a cat
+  that only watches is playing too (in a 2 min session it barely comes).
 - Look (shape/colour/size) changes only while off screen: Hall, Bradshaw & Robinson 2002, play collapses on an
   unchanging toy and comes back for a changed one.
 - Sessions end on their own (2/3/5 min, default 2) with a catchable last prey: laser-pointer play that never ends in a

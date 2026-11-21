@@ -15,6 +15,11 @@ export interface SessionOpts {
   length: number;
   /** A touch screen (paws drive lure, lurk and adaptation). */
   touch: boolean;
+  /**
+   * A real touch screen, so a small one in mm: bigger, busier prey (TOUCH_*). Defaults to `touch`; `?demo` and
+   * `?trace` run touch pacing on a desktop and pass false here, so they show the desktop's prey.
+   */
+  handheld?: boolean;
   learned: Weights | null;
   /** The look the last session ended on: the first one here differs. */
   lastLook: Look | null;
@@ -28,6 +33,21 @@ export const TIRE_MISSES = 8;
 export const ESCAPE_STREAK = 2;
 /** Chance that a single hit already sends it off. */
 export const ESCAPE_FIRST = 0.25;
+
+// Touch screens (iPad, iPhone) are half a desk monitor or less in mm: with sizes and speeds in short edges a mouse
+// was ~11 mm on an iPad 11" against ~20 mm on a 34", a creep 8..32 mm/s. The cat played far more at the monitor
+// (user). So on touch: bigger prey, more running, shorter stops. Desktop is the reference and stays as it was.
+/** Radius factor on touch screens. */
+export const TOUCH_SIZE = 1.4;
+/** Choice weights on touch screens: more bolts and wall runs, less creeping and freezing. */
+export const TOUCH_WEIGHTS: Partial<Record<Choice, number>> = { bolt: 1.8, edge: 1.5, creep: 0.6, freeze: 0.6 };
+/** Factor on freeze durations on touch screens. */
+export const TOUCH_FREEZE = 0.7;
+/**
+ * Factor on every speed on touch screens, with adaptation and fatigue, inside the 0.6..1.25 clamp. 1.1 so the
+ * adaptation's 1.12 still fits under the clamp (1.15 would cut a fast cat's speed-up by a third).
+ */
+export const TOUCH_SPEED = 1.1;
 
 export class Session {
   readonly rng: Rng;
@@ -55,7 +75,7 @@ export class Session {
     this.field = opts.field;
     this.director = new Director(this.rng, opts.length, opts.touch);
     this.lastLook = this.pickLook(opts.lastLook);
-    this.prey = new Prey(this.field, this.rng, this.lastLook);
+    this.prey = new Prey(this.field, this.rng, this.lastLook, false, this.scale);
     this.prey.spawn();
   }
 
@@ -70,6 +90,16 @@ export class Session {
   /** The look now showing (persisted, so the next session starts with another). */
   get look(): Look {
     return this.prey.look;
+  }
+
+  /** A small touch screen: the TOUCH_* tuning applies. */
+  get handheld(): boolean {
+    return this.opts.handheld ?? this.opts.touch;
+  }
+
+  /** Radius factor for every prey of this session. */
+  get scale(): number {
+    return this.handheld ? TOUCH_SIZE : 1;
   }
 
   get tire(): number {
@@ -115,15 +145,18 @@ export class Session {
     // Only the main prey turns easy in the finale; a lure's second prey still leaves when sent.
     const easy = d.phase === 'finale' && !leave;
     if (easy) return { speed: 0.55, freeze: 2, weights: {}, exitDue: false, easy: true };
-    let speed = d.adapt() * (1 - 0.4 * this.tire) * (1 - 0.06 * p.wounds);
+    const touch = this.handheld;
+    let speed = d.adapt() * (1 - 0.4 * this.tire) * (1 - 0.06 * p.wounds) * (touch ? TOUCH_SPEED : 1);
     const learned = this.opts.learned?.states ?? {};
     const weights: Partial<Record<Choice, number>> = {};
-    for (const c of CHOICES) weights[c] = (d.weights[c] ?? 1) * (learned[c] ?? 1);
-    // Hits and learning move the bands by at most a quarter; fatigue may slow it down to 60 %.
+    for (const c of CHOICES) {
+      weights[c] = (d.weights[c] ?? 1) * (learned[c] ?? 1) * (touch ? (TOUCH_WEIGHTS[c] ?? 1) : 1);
+    }
+    // Hits, learning and the touch factor move the bands by at most a quarter; fatigue may slow it down to 60 %.
     speed = Math.max(0.6, Math.min(1.25, speed));
     return {
       speed,
-      freeze: 1 + this.tire,
+      freeze: (1 + this.tire) * (touch ? TOUCH_FREEZE : 1),
       weights,
       exitDue: leave || (p === this.prey && d.exitDue),
       easy: false,
@@ -188,7 +221,7 @@ export class Session {
     this.prey.lure();
     this.events.push({ kind: 'lure' });
     if (!this.extra && this.rng.chance(0.5)) {
-      this.extra = new Prey(this.field, this.rng, nextLook(this.rng, this.prey.look, null));
+      this.extra = new Prey(this.field, this.rng, nextLook(this.rng, this.prey.look, null), false, this.scale);
       this.extra.lives = 1;
       this.extra.spawn(this.prey.pos);
       this.extraLeft = this.rng.range(5, 10);

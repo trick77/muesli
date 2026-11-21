@@ -204,8 +204,10 @@ export class Prey {
     private readonly rng: Rng,
     public look: Look,
     easy = false,
+    /** Factor on the radius (touch screens: see TOUCH_SIZE in session.ts). */
+    readonly scale = 1,
   ) {
-    this.r = radius(field, look);
+    this.r = radius(field, look, scale);
     this.lives = easy ? 1 : 2 + rng.int(3);
     this.pos = { x: -this.r * 3, y: field.h / 2 };
     this.prev = { ...this.pos };
@@ -217,7 +219,7 @@ export class Prey {
   setLook(look: Look) {
     if (this.state !== 'away') return;
     this.look = look;
-    this.r = radius(this.field, look);
+    this.r = radius(this.field, look, this.scale);
   }
 
   /** The next animal after a kill: unhurt, its own lives. */
@@ -230,7 +232,7 @@ export class Prey {
 
   /** The screen changed size (rotation): the radius follows the short edge. */
   resized(old: { w: number; h: number } = this.field) {
-    this.r = radius(this.field, this.look);
+    this.r = radius(this.field, this.look, this.scale);
     // A rotation must not leave it outside the new screen, unseen, walking toward a target that no longer exists.
     if (this.state === 'away') return;
     const before = { ...this.pos };
@@ -1044,9 +1046,9 @@ export class Prey {
   }
 }
 
-/** Body radius, px: 2.25 % of the short edge, 12..28 px, times the look's size. */
-export function radius(f: Field, look: Look): number {
-  return Math.max(R_MIN, Math.min(R_MAX, RADIUS * short(f))) * SIZE_SCALE[look.size];
+/** Body radius, px: 2.25 % of the short edge, 12..28 px, times the look's size and the screen's `scale`. */
+export function radius(f: Field, look: Look, scale = 1): number {
+  return Math.max(R_MIN, Math.min(R_MAX, RADIUS * short(f))) * SIZE_SCALE[look.size] * scale;
 }
 
 const inBox = (b: Box, p: Vec) => p.x >= b.x0 - 0.5 && p.x <= b.x1 + 0.5 && p.y >= b.y0 - 0.5 && p.y <= b.y1 + 0.5;

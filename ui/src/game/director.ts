@@ -18,9 +18,12 @@ export const LURK_AWAY: [number, number] = [3, 6];
  * return. Was a fixed 3 s.
  */
 export const LURK_SHOW: [number, number] = [5, 8];
-/** Seconds of prey on screen without a touch before luring, before lurking. */
+/**
+ * Seconds of prey on screen without a touch before luring, before lurking. Lurk was at 30 s: a cat that only
+ * watched got short looks and a black screen, while the monitor (no touch, no lurk) kept it far longer (user).
+ */
 export const LURE_AFTER = 10;
-export const LURK_AFTER = 30;
+export const LURK_AFTER = 60;
 /** The last prey waits this long to be caught, then runs off. */
 export const FINALE_MAX = 15;
 

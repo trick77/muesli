@@ -6,6 +6,7 @@ import type { Vec } from '../game/geom';
 import type { Tier } from '../game/prey';
 import { Session } from '../game/session';
 import { VirtualCat } from '../game/virtualcat';
+import { touchScreen } from '../platform/device';
 import { t } from '../platform/i18n';
 import { UI_BRIGHT, UI_DIM, UI_TEXT } from '../render/palette';
 import { text, unit } from './ui';
@@ -41,6 +42,7 @@ export function simulate(seed: number, w: number, h: number, seconds: number, ca
     field: { w, h, inset: { top: 0, right: 0, bottom: 0, left: 0 } },
     length: seconds,
     touch: true,
+    handheld: touchScreen(),
     learned: null,
     lastLook: null,
   });
