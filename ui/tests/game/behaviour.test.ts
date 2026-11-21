@@ -7,7 +7,11 @@ import { BAND, CHOICES, TIERS, type Tier } from '../../src/game/prey';
 import { DT, record, type Frame } from './run';
 
 const SEEDS = Array.from({ length: 24 }, (_, i) => i + 1);
-const runs = SEEDS.map((seed) => ({ seed, ...record(seed) }));
+// Touch-screen tuning (TOUCH_*) for every seed, the desktop's for some: both must keep the guarantees.
+const runs = [
+  ...SEEDS.map((seed) => ({ seed, ...record(seed) })),
+  ...SEEDS.slice(0, 8).map((seed) => ({ seed, ...record(seed, { handheld: false }) })),
+];
 const quiet = SEEDS.slice(0, 8).map((seed) => ({ seed, ...record(seed, { cat: false }) }));
 const all = [...runs, ...quiet];
 

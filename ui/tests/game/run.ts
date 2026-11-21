@@ -32,13 +32,17 @@ export interface Record {
   events: (GameEvent & { t: number })[];
 }
 
-export function record(seed: number, opts: { cat?: boolean; length?: number; field?: Field; touch?: boolean } = {}) {
+export function record(
+  seed: number,
+  opts: { cat?: boolean; length?: number; field?: Field; touch?: boolean; handheld?: boolean } = {},
+) {
   const field = opts.field ?? ipad();
   const s = new Session({
     seed,
     field,
     length: opts.length ?? 120,
     touch: opts.touch ?? true,
+    handheld: opts.handheld,
     learned: null,
     lastLook: null,
   });

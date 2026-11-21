@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { AWAY, Director, FINALE_MAX, LURE_AFTER, LURK_AFTER, LURK_AWAY, LURK_SHOW } from '../../src/game/director';
 import { dist, edgeDistance } from '../../src/game/geom';
 import { Rng } from '../../src/game/prng';
-import { NEUTRAL, Prey } from '../../src/game/prey';
-import { Session, TIRE_MISSES } from '../../src/game/session';
+import { NEUTRAL, Prey, radius } from '../../src/game/prey';
+import { Session, TIRE_MISSES, TOUCH_SIZE } from '../../src/game/session';
 import { DT, ipad } from './run';
 
 function session(seed = 1, extra: Partial<ConstructorParameters<typeof Session>[0]> = {}) {
@@ -22,7 +22,7 @@ function untilOnScreen(s: Session) {
 }
 
 describe('director', () => {
-  it('lures after 10 s without a touch, lurks after 30, a touch ends both', () => {
+  it('lures after 10 s without a touch, lurks after 60, a touch ends both', () => {
     const d = new Director(new Rng(1), 300, true);
     let cue: string | null = null;
     for (let t = 0; t < LURE_AFTER - 0.1; t += DT) cue = d.step(DT, true) ?? cue;
@@ -394,6 +394,20 @@ describe('prey', () => {
     expect(p.state === 'enter' || p.state === 'bolt').toBe(true);
     for (let i = 0; i < 300; i++) p.step(DT, NEUTRAL);
     expect(p.visible).toBe(true);
+  });
+
+  it('is bigger on a touch screen, through looks and rotations', () => {
+    const touch = session(3);
+    const desk = session(3, { touch: false });
+    expect(touch.prey.r).toBeCloseTo(desk.prey.r * TOUCH_SIZE);
+    touch.resize(834, 1194, touch.field.inset);
+    desk.resize(834, 1194, desk.field.inset);
+    expect(touch.prey.r).toBeCloseTo(desk.prey.r * TOUCH_SIZE);
+    // a new look, taken while away, keeps the factor
+    const p = new Prey(ipad(), new Rng(4), { variant: 'dot', color: 'blue', size: 'm' }, false, TOUCH_SIZE);
+    expect(p.state).toBe('away');
+    p.setLook({ variant: 'mouse', color: 'lime', size: 'l' });
+    expect(p.r).toBeCloseTo(radius(ipad(), p.look) * TOUCH_SIZE);
   });
 
   it('keeps its look while seen and takes a new one only while away', () => {
